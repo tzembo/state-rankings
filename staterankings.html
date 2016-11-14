@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Rank</title>
+		<script src="https://d3js.org/d3.v4.min.js"></script>
+		<link href="https://fonts.googleapis.com/css?family=Karla" rel="stylesheet">
+
+		<style type="text/css">
+
+			circle {
+				fill-opacity: 0.5;
+			}
+			circle:hover {
+				fill-opacity: 1;
+			}
+
+			text {
+				font-family: 'Karla', sans-serif;
+				font-size: 11px;
+			}
+			
+			.axis line {
+   				fill: none;
+    			stroke: black;
+    			shape-rendering: crispEdges;
+			}
+
+			.axis text {
+    			font-family: sans-serif;
+			}
+
+			.title {
+				font-family: Helvetica;
+				font-weight: bold;
+				font-size: 22px;
+			}
+
+			.desc {
+				fill: gray;
+			}
+
+			.ct {
+			}
+
+			.hov {
+				fill: white;
+				text-anchor: middle;
+				alignment-baseline: central;
+			}
+
+			.button {
+				fill: white;
+				stroke: black;
+			}
+			.button:hover {
+				fill: gray;
+				opacity: .4;
+			}
+
+			.label {
+				text-anchor: middle;
+				alignment-baseline: central;
+			}
+
+		</style>
+	</head>
+	<body>
+		<script type="text/javascript">
+			
+			var w = window.innerWidth;
+			var h = window.innerHeight;
+			var button_w = w / 8;
+			var button_h = h / 8;
+			var padding = h / 10;
+
+			var currentView = 0;
+
+			var statesNames = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"]
+
+			var svg = d3.select("body")
+				.append("svg")
+				.attr("height", h)
+				.attr("width", w);
+
+			var axis = svg.append("g")
+				.attr("class", "axis")
+    			.attr("transform", "translate(0," + (h - padding) + ")");
+
+    		svg.append("text")
+				.attr("class", "title")
+				.attr("x", padding)
+				.attr("y", h / 3 + padding);
+
+			svg.append("text")
+				.attr("class", "src")
+				.attr("x", padding)
+				.attr("y", h / 3 + 2 * padding);
+
+			svg.append("text")
+				.attr("class", "desc")
+				.attr("x", padding)
+				.attr("y", h / 3 + 3 * padding)
+
+			function init() {
+				
+				render(statesData[0]);
+
+
+
+				svg.append("rect")
+					.attr("class", "button")
+					.attr("x", padding + button_w + 5)
+					.attr("y", padding)
+					.attr("width", button_w)
+					.attr("height", button_h)
+					.on("click", function() {
+						if (currentView < statesData.length - 1) {
+							currentView++;
+							render(statesData[currentView])
+						} else {render(statesData[currentView]);}
+					});
+
+				svg.append("text")
+					.attr("class", "label")
+					.attr("x", padding + 3 * button_w / 2 + 5)
+					.attr("y", padding + button_h / 2)
+					.text("NEXT");
+
+				svg.append("rect")
+					.attr("class", "button")
+					.attr("x", padding)
+					.attr("y", padding)
+					.attr("width", button_w)
+					.attr("height", button_h)
+					.on("click", function() {
+						if (currentView > 0) {
+							currentView--;
+							render(statesData[currentView])
+						} else {render(statesData[currentView]);}
+					});
+
+				svg.append("text")
+					.attr("class", "label")
+					.attr("x", padding + button_w / 2)
+					.attr("y", padding + button_h / 2)
+					.text("PREV");
+				
+				};
+
+
+			function render(data) {
+
+				svg.select(".hov").remove();
+
+				svg.select(".title").text(data[0]);
+				svg.select(".src").text(data[1]);
+				svg.select(".desc").text(data[2])
+									.call(textWrap, w - padding, padding);
+
+
+  				var x = d3.scaleLinear()
+					.domain([d3.min(data.slice(3), function(d) {
+						return d; })
+						, d3.max(data.slice(3), function(d) {
+						return d;
+						})])
+					.range([padding, w - padding]);
+
+				var xAxis = d3.axisBottom(x);
+
+				axis.transition().duration(1000).call(xAxis);
+
+				var states = svg.selectAll("circle").data(data.slice(3));
+
+				states.transition()
+					.duration(1000)
+					.attr("cx", function(d) {
+						return x(d);
+					});
+
+				states.enter().append("circle")
+					.attr("cx", function(d) {
+                    	return x(d); 
+                	})
+                	.attr("cy", h - 2 * padding)
+               		.attr("r", 15)
+                	.attr("fill", function(d, i) {
+                		if (i == 6) {
+                			return "green";
+                		} else {return "steelblue"}
+                	})
+                	.merge(states)
+                	.on("mouseover", function(d, i) {
+                		
+                		svg.select(".hov")
+                			.remove();
+
+                		svg.append("text")
+                			.attr("class", "hov")
+                			.attr("x", x(d))
+                			.attr("y", h - 2 * padding) 
+                			.text(statesNames[i]);
+                	});
+
+			}
+
+			d3.csv("rankings_test.csv", function(data) {
+ 				
+				console.log(data);
+
+  				statesData = data.map(function(d) { return [ d["Ranking"], d["Source"], d["Description"],+d["AL"], +d["AK"],+d["AZ"],+d["AR"],+d["CA"],+d["CO"], +d["CT"], +d["DE"],+d["FL"],+d["GA"],+d["HI"],+d["ID"],+d["IL"],+d["IN"],+d["IA"], +d["KS"],+d["KY"],+d["LA"],+d["ME"],+d["MD"],+d["MA"],+d["MI"],+d["MN"],+d["MS"],+d["MO"],+d["MT"],+d["NE"],+d["NV"],+d["NH"],+d["NJ"],+d["NM"],+d["NY"],+d["NC"],+d["ND"],+d["OH"],+d["OK"],+d["OR"],+d["PA"],+d["RI"],+d["SC"],+d["SD"],+d["TN"], +d["TX"], +d["UT"],+d["VT"],+d["VA"],+d["WA"], +d["WV"], +d["WI"], +d["WY"]];
+
+  				});
+  				
+  				init();
+
+
+			});
+    
+    // textWrap based from Mike Bostock, https://bl.ocks.org/mbostock/7555321
+
+    function textWrap(text, width, padding) {
+      text.each(function() {
+        var text = d3.select(this),
+          words = text.text().split(/\s+/).reverse(),
+          word,
+          line = [],
+          lineNumber = 0,
+          lineHeight = 1.1, // ems
+          y = text.attr("y"),
+          dy = parseFloat(text.attr("dy")) || 0,
+          tspan = text.text(null).append("tspan").attr("x", padding).attr("y", y).attr("dy", dy + "em");
+
+        while (word = words.pop()) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          if (tspan.node().getComputedTextLength() > width) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            tspan = text.append("tspan").attr("x", padding).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+          }
+        }
+      });
+    }
+
+
+		</script>
+	</body>
+</html>
